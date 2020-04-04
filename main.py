@@ -1,58 +1,135 @@
+from inputs import get_gamepad
 import serial
 import serial.tools.list_ports
+import threading
+from time import sleep
 
 
+class Drone:
 
-#available_ports = serial.tools.list_ports.comports()
-
-
-#for port in available_ports:
-#	print(port.device)
-
-
-
-ser1 = serial.Serial('/dev/ttyUSB0')
-
-ser1.baudrate = 115200
-ser1.bytesize = serial.EIGHTBITS
-ser1.parity = serial.PARITY_NONE
-ser1.stopbits = serial.STOPBITS_ONE
-ser1.close()
-ser1.open()
-
-roll = 0
-
-while(True):
-
-#	print(byteread)
-	if(ser1.read() == b'B'):
-#		print(ser1.read())
-		if(ser1.read() == b'C'):
-		#read next 8 bytes
-			pitchLSB = ser1.read()
-			pitchMSB = ser1.read()
-			rollLSB = ser1.read()
-			rollMSB = ser1.read()
-			yawLSB = ser1.read()
-			yawMSB = ser1.read()
-
-		#	roll |= rollMSB << 0x8
-		#	roll |= rollLSB & 0xff
-
-			pitch = int.from_bytes(pitchLSB + pitchMSB, "big", signed=True)
-			roll = int.from_bytes(rollLSB + rollMSB, "big", signed=True)
-			yaw = int.from_bytes(yawLSB + yawMSB, "big", signed=True)
-
+	def __init__(self):
+		self.ser1 = 0
+		port_list = serial.tools.list_ports.comports()
+		for i, port in enumerate(port_list):
+			print(i, port.device)
+		selected_port = port_list[int(input("Choose Port: "))]
 		
-			print(yaw)
-			
-#		print(ser1.read())
-#	print(ser1.in_waiting)
+		self.ser = serial.Serial(selected_port[0])
+		self.ser.baudrate = 115200
 
-#			port = self.serialportbox.useport
-#			port.__init__()
-#			port.port = self.serialportbox.edit.get_text()
-#			port.baudrate = int(serialinfo[0])
-#			port.bytesize = int(serialinfo[1])
-#			port.parity = serialinfo[2][0]
-#			port.stopbits = int(serialinfo[3])
+	
+
+class Transmitter:
+
+	raw_throttle = 345
+	raw_yaw = 1024
+	raw_pitch = 1024
+	raw_roll = 1024
+	raw_sw_c = 1024
+	raw_sw_d = 1024
+	
+	throttle = 1000
+	yaw = 1000
+	pitch = 1000
+	roll = 1000
+	sw_c = 1000
+	sw_d = 1000
+
+
+
+#	def __init__(self):
+		
+	def transmit_bytes(self):
+
+		bytes_tx = [0x42, 0x43]
+		bytes_tx.append((trans_real.throttle >> 8) & 0xff)
+		bytes_tx.append(trans_real.throttle & 0xff)
+		bytes_tx.append((trans_real.roll >> 8) & 0xff)
+		bytes_tx.append(trans_real.roll & 0xff)
+		bytes_tx.append((trans_real.pitch >> 8) & 0xff)
+		bytes_tx.append(trans_real.pitch & 0xff)
+		bytes_tx.append((trans_real.yaw >> 8) & 0xff)
+		bytes_tx.append(trans_real.yaw & 0xff)
+		bytes_tx.append((trans_real.sw_c >> 8) & 0xff)
+		bytes_tx.append(trans_real.sw_c & 0xff)
+		bytes_tx.append((trans_real.sw_d >> 8) & 0xff)
+		bytes_tx.append(trans_real.sw_d & 0xff)
+	
+		bytarr = bytearray()
+		
+		for ele in bytes_tx:
+			bytarr.append(ele)
+		
+
+		return bytarr
+		
+		
+	def update_gamepad(self):
+		while 1:	
+			events = get_gamepad()
+			for event in events:
+				if event.code is "ABS_X":
+					Transmitter.raw_yaw = event.state
+					
+				if event.code is "ABS_Y":
+					Transmitter.raw_throttle = event.state
+
+				if event.code is "ABS_RX":
+					Transmitter.raw_pitch = event.state
+
+				if event.code is "ABS_Z":
+					Transmitter.raw_roll = event.state
+					
+				if event.code is "ABS_RY":
+					Transmitter.raw_sw_c = event.state
+			
+				if event.code is "ABS_RZ":
+					Transmitter.raw_sw_d = event.state
+				
+
+			Transmitter.throttle = int(2000/1362 * (trans_real.raw_throttle - 342))
+			Transmitter.yaw = int(2000/1362 * (trans_real.raw_yaw - 342))
+			Transmitter.pitch = int(2000/1362 * (trans_real.raw_pitch - 342))
+			Transmitter.roll = int(2000/1362 * (trans_real.raw_roll - 342))
+			if(Transmitter.raw_sw_c > 45):
+				Transmitter.sw_c = 0
+			else:
+				Transmitter.sw_c = 1000
+			
+			if(Transmitter.raw_sw_d < 45):
+				Transmitter.sw_d = 2000
+			elif(210 > Transmitter.raw_sw_d > 45):
+				Transmitter.sw_d = 1000
+			elif(Transmitter.raw_sw_d > 210):
+				Transmitter.sw_d = 0
+			
+
+	#		print(Transmitter.sw_d)
+
+
+
+drone1 = Drone()
+trans_real = Transmitter()
+threading.Thread(target=trans_real.update_gamepad).start()
+
+
+
+while 1:
+	
+	
+	transmit_bytes = trans_real.transmit_bytes()
+
+
+	drone1.ser.write(transmit_bytes)
+	
+	sleep(.025)
+
+	
+
+	
+
+	
+		
+
+
+
