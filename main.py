@@ -7,6 +7,14 @@ from time import sleep
 
 class Drone:
 
+	pitch = 0
+	roll = 0
+	yaw = 0
+	heading = 0
+	altitude = 0
+	
+
+
 	def __init__(self):
 		self.ser1 = 0
 		port_list = serial.tools.list_ports.comports()
@@ -16,7 +24,33 @@ class Drone:
 		
 		self.ser = serial.Serial(selected_port[0])
 		self.ser.baudrate = 115200
+		
+		
 
+	def update_attitude(self, rx_data):
+		index_start = 0
+		rx_aligned = []
+		for i, byte in enumerate(rx_data):
+			if byte is 0x42:
+				index_start = i
+				break
+		
+		if(index_start is 14):
+			if(rx_data[0] is 0x43):
+				for i in range(1, len(rx_data)):
+					rx_aligned[i-1] = rx_data[i]
+					
+		else:
+			if(rx_data[index_start + 1] is 0x43):
+				for i in range(index_start, len(rx_data)):
+					rx_aligned[i + index_start] = rx_data[i]
+					
+				for i in range(0, index_start):
+					rx_aligned[i] = rx_data[index]
+					
+		self.roll = int.from_bytes(rx_aligned[2-3])
+		
+		 
 	
 
 class Transmitter:
@@ -105,7 +139,9 @@ class Transmitter:
 			
 
 	#		print(Transmitter.sw_d)
+	
 
+		
 
 
 drone1 = Drone()
@@ -122,7 +158,13 @@ while 1:
 
 	drone1.ser.write(transmit_bytes)
 	
-	sleep(.025)
+	data = drone1.ser.read(10)
+	
+	drone1.update_attitude(data)
+	
+	print(drone1.roll)
+	
+#	sleep(.01)
 
 	
 
