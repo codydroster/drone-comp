@@ -50,7 +50,7 @@ class Drone:
 				rx_aligned.extend(rx_data[index_start:10])
 				if(index_start is not 0):
 					rx_aligned.extend(rx_data[0:(index_start - 1)])
-	#			print(rx_aligned)
+					
 				
 					
 		self.roll = int.from_bytes(rx_aligned[2:4], byteorder='big', signed='true')
@@ -141,10 +141,7 @@ class Transmitter:
 				Transmitter.sw_d = 1000
 			elif(Transmitter.raw_sw_d > 210):
 				Transmitter.sw_d = 0
-			
-
-	#		print(Transmitter.sw_d)
-	
+				
 
 		
 
@@ -160,15 +157,14 @@ while 1:
 	
 	transmit_bytes = trans_real.transmit_bytes()
 
-
 	drone1.ser.write(transmit_bytes)
 	
-	data = drone1.ser.read(10)
+#	data = drone1.ser.read(10)
+	drone1.update_attitude(drone1.ser.read(10))
 	
-	drone1.update_attitude(data)
+	print(drone1.roll)
 	
-	print(drone1.heading)
-	
+	#xbee doesn't function properly without sleep	
 	sleep(.025)
 
 	
