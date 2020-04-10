@@ -30,23 +30,24 @@ class Drone:
 	def update_attitude(self, rx_data):
 		index_start = 0
 		rx_aligned = []
+		
+		#determine where 10 byte packet begins.
 		for i, byte in enumerate(rx_data):
 			if byte is 0x42:
 				index_start = i
 				break
 		
+		
+		
 		if(index_start is 14):
 			if(rx_data[0] is 0x43):
-				for i in range(1, len(rx_data)):
-					rx_aligned[i-1] = rx_data[i]
-					
+				rx_aligned = [rx_data[14], rx_data[0-13]]
+				
+				
 		else:
 			if(rx_data[index_start + 1] is 0x43):
-				for i in range(index_start, len(rx_data)):
-					rx_aligned[i + index_start] = rx_data[i]
-					
-				for i in range(0, index_start):
-					rx_aligned[i] = rx_data[index]
+				rx_aligned = [rx_data[index_start - 13], rx_data[0 - (index_start - 1)]]
+				
 					
 		self.roll = int.from_bytes(rx_aligned[2-3])
 		
