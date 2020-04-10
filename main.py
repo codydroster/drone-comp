@@ -29,7 +29,7 @@ class Drone:
 
 	def update_attitude(self, rx_data):
 		index_start = 0
-		rx_aligned = []
+		rx_aligned = bytearray()
 		
 		#determine where 10 byte packet begins.
 		for i, byte in enumerate(rx_data):
@@ -39,20 +39,24 @@ class Drone:
 		
 		
 		
-		if(index_start is 14):
+		if(index_start is 10):
 			if(rx_data[0] is 0x43):
-				rx_aligned = [rx_data[14], rx_data[0-13]]
+				rx_aligned.extend(rx_data[10])
+				rx_aligned.extend(rx_data[0:9])
 				
 				
 		else:
 			if(rx_data[index_start + 1] is 0x43):
-				rx_aligned = [rx_data[index_start - 13], rx_data[0 - (index_start - 1)]]
+				rx_aligned.extend(rx_data[index_start:10])
+				if(index_start is not 0):
+					rx_aligned.extend(rx_data[0:(index_start - 1)])
+	#			print(rx_aligned)
 				
 					
-		self.roll = int.from_bytes(rx_aligned[2-3])
-		
-		 
-	
+		self.roll = int.from_bytes(rx_aligned[2:4], byteorder='big', signed='true')
+		self.pitch = int.from_bytes(rx_aligned[4:6], byteorder='big', signed='true')
+		self.heading = int.from_bytes(rx_aligned[6:8], byteorder='big', signed='true') 
+		self.altitude = int.from_bytes(rx_aligned[8:10], byteorder='big', signed='true')
 
 class Transmitter:
 
@@ -163,9 +167,9 @@ while 1:
 	
 	drone1.update_attitude(data)
 	
-	print(drone1.roll)
+	print(drone1.heading)
 	
-#	sleep(.01)
+	sleep(.025)
 
 	
 
