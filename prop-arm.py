@@ -27,7 +27,7 @@ drone1 = droneArm()
 while 1:
 	
 
-	drone1.ser.write(b'hi')
+	data = drone1.ser.read()
 	
 
 

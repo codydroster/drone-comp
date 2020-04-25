@@ -3,6 +3,11 @@ import serial
 import serial.tools.list_ports
 import threading
 from time import sleep
+import io
+import os
+import fileinput
+import multiprocessing as mp
+
 
 
 class Drone:
@@ -23,40 +28,11 @@ class Drone:
 		selected_port = port_list[int(input("Choose Port: "))]
 		
 		self.ser = serial.Serial(selected_port[0])
-		self.ser.baudrate = 115200
+		self.ser.baudrate = 230400
 		
 		
 
-	def update_attitude(self, rx_data):
-		index_start = 0
-		rx_aligned = bytearray()
-		
-		#determine where 10 byte packet begins.
-		for i, byte in enumerate(rx_data):
-			if byte is 0x42:
-				index_start = i
-				break
-		
-		
-		
-		if(index_start is 10):
-			if(rx_data[0] is 0x43):
-				rx_aligned.extend(rx_data[10])
-				rx_aligned.extend(rx_data[0:9])
-				
-				
-		else:
-			if(rx_data[index_start + 1] is 0x43):
-				rx_aligned.extend(rx_data[index_start:10])
-				if(index_start is not 0):
-					rx_aligned.extend(rx_data[0:(index_start - 1)])
-					
-				
-					
-		self.roll = int.from_bytes(rx_aligned[2:4], byteorder='big', signed='true')
-		self.pitch = int.from_bytes(rx_aligned[4:6], byteorder='big', signed='true')
-		self.heading = int.from_bytes(rx_aligned[6:8], byteorder='big', signed='true') 
-		self.altitude = int.from_bytes(rx_aligned[8:10], byteorder='big', signed='true')
+
 
 class Transmitter:
 
@@ -81,18 +57,18 @@ class Transmitter:
 	def transmit_bytes(self):
 
 		bytes_tx = [0x42, 0x43]
-		bytes_tx.append((trans_real.throttle >> 8) & 0xff)
-		bytes_tx.append(trans_real.throttle & 0xff)
-		bytes_tx.append((trans_real.roll >> 8) & 0xff)
-		bytes_tx.append(trans_real.roll & 0xff)
-		bytes_tx.append((trans_real.pitch >> 8) & 0xff)
-		bytes_tx.append(trans_real.pitch & 0xff)
-		bytes_tx.append((trans_real.yaw >> 8) & 0xff)
-		bytes_tx.append(trans_real.yaw & 0xff)
-		bytes_tx.append((trans_real.sw_c >> 8) & 0xff)
-		bytes_tx.append(trans_real.sw_c & 0xff)
-		bytes_tx.append((trans_real.sw_d >> 8) & 0xff)
-		bytes_tx.append(trans_real.sw_d & 0xff)
+		bytes_tx.append((self.throttle >> 8) & 0xff)
+		bytes_tx.append(self.throttle & 0xff)
+		bytes_tx.append((self.roll >> 8) & 0xff)
+		bytes_tx.append(self.roll & 0xff)
+		bytes_tx.append((self.pitch >> 8) & 0xff)
+		bytes_tx.append(self.pitch & 0xff)
+		bytes_tx.append((self.yaw >> 8) & 0xff)
+		bytes_tx.append(self.yaw & 0xff)
+		bytes_tx.append((self.sw_c >> 8) & 0xff)
+		bytes_tx.append(self.sw_c & 0xff)
+		bytes_tx.append((self.sw_d >> 8) & 0xff)
+		bytes_tx.append(self.sw_d & 0xff)
 	
 		bytarr = bytearray()
 		
@@ -104,68 +80,118 @@ class Transmitter:
 		
 		
 	def update_gamepad(self):
-		while 1:	
+		while 1:
+	
 			events = get_gamepad()
 			for event in events:
 				if event.code is "ABS_X":
-					Transmitter.raw_yaw = event.state
+					self.raw_yaw = event.state
 					
 				if event.code is "ABS_Y":
-					Transmitter.raw_throttle = event.state
+					self.raw_throttle = event.state
 
 				if event.code is "ABS_RX":
-					Transmitter.raw_pitch = event.state
+					self.raw_pitch = event.state
 
 				if event.code is "ABS_Z":
-					Transmitter.raw_roll = event.state
+					self.raw_roll = event.state
 					
 				if event.code is "ABS_RY":
-					Transmitter.raw_sw_c = event.state
+					self.raw_sw_c = event.state
 			
 				if event.code is "ABS_RZ":
-					Transmitter.raw_sw_d = event.state
+					self.raw_sw_d = event.state
 				
 
-			Transmitter.throttle = int(2000/1362 * (trans_real.raw_throttle - 342))
-			Transmitter.yaw = int(2000/1362 * (trans_real.raw_yaw - 342))
-			Transmitter.pitch = int(2000/1362 * (trans_real.raw_pitch - 342))
-			Transmitter.roll = int(2000/1362 * (trans_real.raw_roll - 342))
-			if(Transmitter.raw_sw_c > 45):
-				Transmitter.sw_c = 0
+			self.throttle = int(2000/1362 * (self.raw_throttle - 342))
+			self.yaw = int(2000/1362 * (self.raw_yaw - 342))
+			self.pitch = int(2000/1362 * (self.raw_pitch - 342))
+			self.roll = int(2000/1362 * (self.raw_roll - 342))
+			if(self.raw_sw_c > 45):
+				self.sw_c = 0
 			else:
-				Transmitter.sw_c = 1000
+				self.sw_c = 1000
 			
-			if(Transmitter.raw_sw_d < 45):
-				Transmitter.sw_d = 2000
-			elif(210 > Transmitter.raw_sw_d > 45):
-				Transmitter.sw_d = 1000
-			elif(Transmitter.raw_sw_d > 210):
-				Transmitter.sw_d = 0
-				
+			if(self.raw_sw_d < 45):
+				self.sw_d = 2000
+			elif(210 > self.raw_sw_d > 45):
+				self.sw_d = 1000
+			elif(self.raw_sw_d > 210):
+				self.sw_d = 0
 
+
+
+def serial_handler():
+
+	while 1:
+
+		while(drone1.ser.in_waiting is 0):
+			None
+
+		read0 = drone1.ser.read()
+	#	print(read0)
 		
+		if(read0 == b'B'):
+
+			while(drone1.ser.in_waiting is 0):
+				None
+				
+			read1 = drone1.ser.read()
+
+			if(read1 == b'C'):
+				rx_aligned = drone1.ser.read(8)
+				drone1.roll = int.from_bytes(rx_aligned[0:2], byteorder='big', signed='true')
+				drone1.pitch = int.from_bytes(rx_aligned[2:4], byteorder='big', signed='true')
+				drone1.heading = int.from_bytes(rx_aligned[4:6], byteorder='big', signed='true') 
+				drone1.altitude = int.from_bytes(rx_aligned[6:8], byteorder='big', signed='true')
+
+				#print(trans_real.transmit_bytes())
+				#great time to transmit, next ~600 byte packet 50ms away
+				txbytes = trans_real.transmit_bytes()
+				#print(txbytes)
+				drone1.ser.write(txbytes)
+				while(drone1.ser.out_waiting is not 0):
+					None
+				
+			else:
+				f.write(read0)
+				f.write(read1)
+		else:
+			
+			f.write(read0)
 
 
+os.remove('/home/cody/git/rtk/rover.ubx')
+f = open('/home/cody/git/rtk/rover.ubx', 'wb')
 drone1 = Drone()
 trans_real = Transmitter()
+
 threading.Thread(target=trans_real.update_gamepad).start()
 
 
 
 while 1:
+	serial_handler()
 	
 	
-	transmit_bytes = trans_real.transmit_bytes()
 
-	drone1.ser.write(transmit_bytes)
+			
 	
-#	data = drone1.ser.read(10)
-	drone1.update_attitude(drone1.ser.read(10))
 	
-	print(drone1.roll)
 	
-	#xbee doesn't function properly without sleep	
-	sleep(.025)
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+
 
 	
 
