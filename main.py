@@ -161,8 +161,8 @@ def serial_handler():
 			f.write(read0)
 
 
-os.remove('/home/cody/git/rtk/rover.ubx')
-f = open('/home/cody/git/rtk/rover.ubx', 'wb')
+os.remove('/home/cody/dev/RTK/rover.ubx')
+f = open('/home/cody/dev/RTK/rover.ubx', 'wb')
 drone1 = Drone()
 trans_real = Transmitter()
 
