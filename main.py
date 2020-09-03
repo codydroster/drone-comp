@@ -3,6 +3,7 @@ import serial
 import serial.tools.list_ports
 import threading
 from time import sleep
+import time
 import io
 import os
 import fileinput
@@ -43,12 +44,16 @@ class Transmitter:
 	raw_sw_c = 1024
 	raw_sw_d = 1024
 	
-	throttle = 1000
+
+#range: 0-2000
+	throttle = 0
 	yaw = 1000
 	pitch = 1000
 	roll = 1000
-	sw_c = 1000
-	sw_d = 1000
+	sw_c = 0
+	sw_d = 0
+	
+	autoHeading = 1500
 
 
 
@@ -56,27 +61,55 @@ class Transmitter:
 		
 	def transmit_bytes(self):
 
-		bytes_tx = [0x42, 0x43]
-		bytes_tx.append((self.throttle >> 8) & 0xff)
-		bytes_tx.append(self.throttle & 0xff)
-		bytes_tx.append((self.roll >> 8) & 0xff)
-		bytes_tx.append(self.roll & 0xff)
-		bytes_tx.append((self.pitch >> 8) & 0xff)
-		bytes_tx.append(self.pitch & 0xff)
-		bytes_tx.append((self.yaw >> 8) & 0xff)
-		bytes_tx.append(self.yaw & 0xff)
-		bytes_tx.append((self.sw_c >> 8) & 0xff)
-		bytes_tx.append(self.sw_c & 0xff)
-		bytes_tx.append((self.sw_d >> 8) & 0xff)
-		bytes_tx.append(self.sw_d & 0xff)
-	
-		bytarr = bytearray()
-		
-		for ele in bytes_tx:
-			bytarr.append(ele)
-		
 
-		return bytarr
+		if(self.sw_c is 0): #0
+			bytes_tx = [0x42, 0x43]
+			bytes_tx.append((self.throttle >> 8) & 0xff)
+			bytes_tx.append(self.throttle & 0xff)
+			bytes_tx.append((self.roll >> 8) & 0xff)
+			bytes_tx.append(self.roll & 0xff)
+			bytes_tx.append((self.pitch >> 8) & 0xff)
+			bytes_tx.append(self.pitch & 0xff)
+			bytes_tx.append((self.yaw >> 8) & 0xff)
+			bytes_tx.append(self.yaw & 0xff)
+
+			bytes_tx.append((self.sw_c >> 8) & 0xff)
+			bytes_tx.append(self.sw_c & 0xff)
+			bytes_tx.append((self.sw_d >> 8) & 0xff)
+			bytes_tx.append(self.sw_d & 0xff)
+		
+			bytarr = bytearray()
+			
+			for ele in bytes_tx:
+				bytarr.append(ele)
+			
+			return bytarr
+			
+			
+		if(self.sw_c > 0): #1000
+			bytes_tx = [0x42, 0x43]
+			bytes_tx.append((self.throttle >> 8) & 0xff)
+			bytes_tx.append(self.throttle & 0xff)
+			bytes_tx.append((self.roll >> 8) & 0xff)
+			bytes_tx.append(self.roll & 0xff)
+			bytes_tx.append((self.pitch >> 8) & 0xff)
+			bytes_tx.append(self.pitch & 0xff)
+			bytes_tx.append((self.autoHeading >> 8) & 0xff)
+			bytes_tx.append(self.autoHeading & 0xff)
+			bytes_tx.append((self.sw_c >> 8) & 0xff)
+			bytes_tx.append(self.sw_c & 0xff)
+			bytes_tx.append((self.sw_d >> 8) & 0xff)
+			bytes_tx.append(self.sw_d & 0xff)
+		
+			bytarr = bytearray()
+			
+			for ele in bytes_tx:
+				bytarr.append(ele)
+			
+			return bytarr
+			
+			
+			
 		
 		
 	def update_gamepad(self):
@@ -119,39 +152,69 @@ class Transmitter:
 
 
 
+
 def serial_handler():
 
-#	while 1:
 
-	#	while(drone1.ser.in_waiting is 0):
-	#		None
-
-	if(drone1.ser.in_waiting > 2):
+	if(drone1.ser.in_waiting > 0):
 	
 		read0 = drone1.ser.read()
-		read1 = drone1.ser.read()
 
 	
-		if(read0 == b'B' and read1 ==b'C'):
+		if(read0 != b'B'):
+			f.write(read0)
+	
+		else:
+			read1 = drone1.ser.read()
+			read2 = drone1.ser.read()
+			read3 = drone1.ser.read()
+	
 
-			rx_aligned = drone1.ser.read(8)
-			drone1.roll = int.from_bytes(rx_aligned[0:2], byteorder='big', signed='true')
-			drone1.pitch = int.from_bytes(rx_aligned[2:4], byteorder='big', signed='true')
-			drone1.heading = int.from_bytes(rx_aligned[4:6], byteorder='big', signed='true') 
-			drone1.altitude = int.from_bytes(rx_aligned[6:8], byteorder='big', signed='true')
+			if(read1 == b'C'):
+				if(read2 == b'D'):
+					if(read3 == b'E'):
+				
+						rx_aligned = drone1.ser.read(8)
+						drone1.roll = int.from_bytes(rx_aligned[0:2], byteorder='big', signed='true')
+						drone1.pitch = int.from_bytes(rx_aligned[2:4], byteorder='big', signed='true')
+						drone1.heading = int.from_bytes(rx_aligned[4:6], byteorder='big', signed='true') 
+						drone1.altitude = int.from_bytes(rx_aligned[6:8], byteorder='big', signed='true')
+						
 
+						#great time to transmit, next ~600 byte packet 50ms away
+						txbytes = trans_real.transmit_bytes()
+
+						#send to drone
+						if(txbytes is not None):
+							drone1.ser.write(txbytes)
+						print(trans_real.throttle)
+
+					else:
+						f.write(read0)
+						f.write(read1)
+						f.write(read2)
+						f.write(read3)
+			
 		
-			#great time to transmit, next ~600 byte packet 50ms away
-			txbytes = trans_real.transmit_bytes()
-
-			#send to drone
-			drone1.ser.write(txbytes)
+			
 
 			
-		else:
-			f.write(read0)
-			f.write(read1)
+		
 	
+
+
+def pid_heading():
+
+	if(drone1.heading > 1800):
+		drone1.heading = drone1.heading- 3600
+
+	kP = .1
+	setPoint = 0
+	
+	trans_real.autoHeading = int(1000 - drone1.heading * kP)
+	
+#	print(trans_real.autoHeading)
+
 
 
 
@@ -168,9 +231,10 @@ threading.Thread(target=trans_real.update_gamepad).start()
 while 1:
 
 	serial_handler()
+	pid_heading()
+#	print(trans_real.sw_c)
+#	print(trans_real.throttle)
 
-	print(trans_real.sw_c)
-	
 	
 
 			
