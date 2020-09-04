@@ -2,7 +2,7 @@ from inputs import devices
 import serial
 import serial.tools.list_ports
 import threading
-from time import sleep
+
 import time
 import io
 import os
@@ -11,6 +11,12 @@ import multiprocessing as mp
 
 
 
+class GPS:
+	longitude = 0
+	latitude = 0
+	altitude = 0
+	pastTime = 0
+
 class Drone:
 
 	pitch = 0
@@ -18,7 +24,8 @@ class Drone:
 	yaw = 0
 	heading = 0
 	altitude = 0
-	
+	altitudeInt = 0	
+	output = 0
 
 
 	def __init__(self):
@@ -52,9 +59,10 @@ class Transmitter:
 	roll = 1000
 	sw_c = 0
 	sw_d = 0
-	
-	autoHeading = 1500
 
+	hoverThrottle = 600
+	autoHeading = 1500
+	autoAltitude = 0
 
 
 #	def __init__(self):
@@ -77,6 +85,8 @@ class Transmitter:
 			bytes_tx.append(self.sw_c & 0xff)
 			bytes_tx.append((self.sw_d >> 8) & 0xff)
 			bytes_tx.append(self.sw_d & 0xff)
+
+			hoverThrottle = self.throttle
 		
 			bytarr = bytearray()
 			
@@ -86,7 +96,7 @@ class Transmitter:
 			return bytarr
 			
 			
-		if(self.sw_c > 0): #1000
+		if(self.sw_c > 0): #1000	AUXC switch on
 			bytes_tx = [0x42, 0x43]
 			bytes_tx.append((self.throttle >> 8) & 0xff)
 			bytes_tx.append(self.throttle & 0xff)
@@ -200,7 +210,7 @@ def serial_handler():
 
 			
 		
-	
+	 
 
 
 def pid_heading():
@@ -208,7 +218,7 @@ def pid_heading():
 	if(drone1.heading > 1800):
 		drone1.heading = drone1.heading- 3600
 
-	kP = .1
+	kP = .2
 	setPoint = 0
 	
 	trans_real.autoHeading = int(1000 - drone1.heading * kP)
@@ -217,11 +227,53 @@ def pid_heading():
 
 
 
+def pid_altitude():
+	kP = 1 
+	kI = .1 
+	setPoint = 245
+	minThrottle = 500
+	maxThrottle = 1200
+	maxOutput = 1500
+	
+	error = setPoint - gps.altitude
+	drone1.pastTime = perf_counter() - drone1.pastTime
+
+# P-Term
+	proportional = error*Kp
+
+
+#integrator anti-windup I-Term
+#if condititions are met, use past value of integral
+
+	if(error > 0 and integral > 0):
+		if(drone1.output < maxOutput):	
+			drone1.pastInt = error*drone1.pastTime*kI
+	
+	if(error < 0 and integral < 0):
+		if(drone1.output < maxOutput):
+			drone1.pastInt = error*drone1.pastTime*kI
+
+	
+		
+
+	drone1.output = int(drone1.hoverThrottle + proportional + drone1.pastInt)
+	drone1.autoAltitude = min(max(minThrottle, drone1.output) maxThrottle)
+
+  
+
+
+
+
+
 
 os.remove('/home/cody/dev/RTK/rover.ubx')
 f = open('/home/cody/dev/RTK/rover.ubx', 'wb')
 drone1 = Drone()
 trans_real = Transmitter()
+gpsDrone = GPS()
+
+#get initial counter value
+gps.pastTime = perf_counter()
 
 #inputs module blocks
 threading.Thread(target=trans_real.update_gamepad).start()
