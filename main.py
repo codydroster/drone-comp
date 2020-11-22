@@ -236,7 +236,7 @@ def pid_altitude():
 	maxOutput = 1500
 	
 	error = setPoint - gps.altitude
-	drone1.pastTime = perf_counter() - drone1.pastTime
+	drone1.pastTime = time.perf_counter() - drone1.pastTime
 
 # P-Term
 	proportional = error*Kp
@@ -257,11 +257,11 @@ def pid_altitude():
 		
 
 	drone1.output = int(drone1.hoverThrottle + proportional + drone1.pastInt)
-	drone1.autoAltitude = min(max(minThrottle, drone1.output) maxThrottle)
+	drone1.autoAltitude = min(max(minThrottle, drone1.output), maxThrottle)
 
   
 
-
+#	print(trans_real.throttle)
 
 
 
@@ -270,10 +270,10 @@ os.remove('/home/cody/dev/RTK/rover.ubx')
 f = open('/home/cody/dev/RTK/rover.ubx', 'wb')
 drone1 = Drone()
 trans_real = Transmitter()
-gpsDrone = GPS()
+gps = GPS()
 
 #get initial counter value
-gps.pastTime = perf_counter()
+gps.pastTime = time.perf_counter()
 
 #inputs module blocks
 threading.Thread(target=trans_real.update_gamepad).start()
@@ -284,6 +284,7 @@ while 1:
 
 	serial_handler()
 	pid_heading()
+#	print(trans_real.throttle)
 #	print(trans_real.sw_c)
 #	print(trans_real.throttle)
 
