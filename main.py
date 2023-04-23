@@ -1,4 +1,5 @@
 from inputs import devices 
+import pygame
 import serial
 import serial.tools.list_ports
 import threading
@@ -33,7 +34,7 @@ class Drone:
 		port_list = serial.tools.list_ports.comports()
 		for i, port in enumerate(port_list):
 			print(i, port.device)
-		selected_port = port_list[int(input("Choose Port: "))]
+		selected_port = port_list[int(input("Choose Xbee Port: "))]
 		
 		self.ser = serial.Serial(selected_port[0])
 		self.ser.baudrate = 230400
@@ -70,8 +71,8 @@ class Transmitter:
 	def transmit_bytes(self):
 
 
-		if(self.sw_c is 0): #0
-			bytes_tx = [0x42, 0x43]
+		if(self.sw_c == 0): #0
+			bytes_tx = [0x42]
 			bytes_tx.append((self.throttle >> 8) & 0xff)
 			bytes_tx.append(self.throttle & 0xff)
 			bytes_tx.append((self.roll >> 8) & 0xff)
@@ -85,6 +86,7 @@ class Transmitter:
 			bytes_tx.append(self.sw_c & 0xff)
 			bytes_tx.append((self.sw_d >> 8) & 0xff)
 			bytes_tx.append(self.sw_d & 0xff)
+			bytes_tx.append(0x43)
 
 			hoverThrottle = self.throttle
 		
@@ -97,7 +99,7 @@ class Transmitter:
 			
 			
 		if(self.sw_c > 0): #1000	AUXC switch on
-			bytes_tx = [0x42, 0x43]
+			bytes_tx = [0x42]
 			bytes_tx.append((self.throttle >> 8) & 0xff)
 			bytes_tx.append(self.throttle & 0xff)
 			bytes_tx.append((self.roll >> 8) & 0xff)
@@ -110,6 +112,7 @@ class Transmitter:
 			bytes_tx.append(self.sw_c & 0xff)
 			bytes_tx.append((self.sw_d >> 8) & 0xff)
 			bytes_tx.append(self.sw_d & 0xff)
+			bytes_tx.append(0x43)
 		
 			bytarr = bytearray()
 			
@@ -129,17 +132,17 @@ class Transmitter:
 			events = devices.gamepads[0]._do_iter()
 			if events is not None:
 				for event in events:
-					if event.code is "ABS_X":
+					if event.code == "ABS_X":
 						self.raw_yaw = event.state	
-					if event.code is "ABS_Y":
+					if event.code == "ABS_Y":
 						self.raw_throttle = event.state
-					if event.code is "ABS_RX":
+					if event.code == "ABS_RX":
 						self.raw_pitch = event.state
-					if event.code is "ABS_Z":
+					if event.code == "ABS_Z":
 						self.raw_roll = event.state						
-					if event.code is "ABS_RY":
+					if event.code == "ABS_RY":
 						self.raw_sw_c = event.state			
-					if event.code is "ABS_RZ":
+					if event.code == "ABS_RZ":
 						self.raw_sw_d = event.state
 					
 
@@ -174,37 +177,33 @@ def serial_handler():
 		if(read0 != b'B'):
 			f.write(read0)
 	
-		else:
-			read1 = drone1.ser.read()
-			read2 = drone1.ser.read()
-			read3 = drone1.ser.read()
 	
-
-			if(read1 == b'C'):
-				if(read2 == b'D'):
-					if(read3 == b'E'):
-				
-						rx_aligned = drone1.ser.read(8)
-						drone1.roll = int.from_bytes(rx_aligned[0:2], byteorder='big', signed='true')
-						drone1.pitch = int.from_bytes(rx_aligned[2:4], byteorder='big', signed='true')
-						drone1.heading = int.from_bytes(rx_aligned[4:6], byteorder='big', signed='true') 
-						drone1.altitude = int.from_bytes(rx_aligned[6:8], byteorder='big', signed='true')
-						
-
-						#great time to transmit, next ~600 byte packet 50ms away
-						txbytes = trans_real.transmit_bytes()
-
-						#send to drone
-						if(txbytes is not None):
-							drone1.ser.write(txbytes)
-						print(trans_real.throttle)
-
-					else:
-						f.write(read0)
-						f.write(read1)
-						f.write(read2)
-						f.write(read3)
+	#verify frame **need to simplify**
+		else:
+			rx_aligned = drone1.ser.read(9)
 			
+			if(rx_aligned[9] == 0x43): #maybe rx_aligned[9]
+				if(drone1.roll > 1000 and drone1.roll < 2000):
+					if(drone1.pitch > 1000 and drone1.pitch < 2000):
+						if(drone1.heading < 3601):
+							drone1.roll = int.from_bytes(rx_aligned[0:2], byteorder='big', signed='true')					
+							drone1.pitch = int.from_bytes(rx_aligned[2:4], byteorder='big', signed='true')
+							drone1.heading = int.from_bytes(rx_aligned[4:6], byteorder='big', signed='true') 
+							drone1.altitude = int.from_bytes(rx_aligned[6:8], byteorder='big', signed='true')
+							
+
+							#great time to transmit, next ~600 byte packet 50ms away
+							txbytes = trans_real.transmit_bytes()
+
+							#send to drone
+							if(txbytes is not None):
+								drone1.ser.write(txbytes)
+								print(trans_real.throttle)
+						
+						#only write to file if all if statments fail
+						else:
+							f.write(rx_aligned)
+				
 		
 			
 
@@ -266,8 +265,8 @@ def pid_altitude():
 
 
 
-os.remove('/home/cody/dev/RTK/rover.ubx')
-f = open('/home/cody/dev/RTK/rover.ubx', 'wb')
+os.remove('/home/cody/git/drone-comp/rover.ubx')
+f = open('/home/cody/git/drone-comp/rover.ubx', 'wb')
 drone1 = Drone()
 trans_real = Transmitter()
 gps = GPS()
