@@ -2,7 +2,7 @@ from inputs import devices
 import pygame
 import serial
 import serial.tools.list_ports
-import threading
+
 
 import time
 import io
@@ -10,6 +10,10 @@ import os
 import fileinput
 import multiprocessing as mp
 
+
+pygame.init()
+pygame.joystick.init()
+pyJoystick = pygame.joystick.Joystick(0)
 
 
 class GPS:
@@ -45,21 +49,15 @@ class Drone:
 
 class Transmitter:
 
-	raw_throttle = 345
-	raw_yaw = 1024
-	raw_pitch = 1024
-	raw_roll = 1024
-	raw_sw_c = 1024
-	raw_sw_d = 1024
-	
 
 #range: 0-2000
-	throttle = 0
-	yaw = 1000
-	pitch = 1000
+	yaw = 0
+	throttle = 1000
 	roll = 1000
-	sw_c = 0
-	sw_d = 0
+	pitch = 1000
+	auxA = 0
+	auxD = 0
+	knobR = 0
 
 	hoverThrottle = 600
 	autoHeading = 1500
@@ -70,6 +68,7 @@ class Transmitter:
 		
 	def transmit_bytes(self):
 
+######also need to send waypoint info###############
 
 		if(self.sw_c == 0): #0
 			bytes_tx = [0x42]
@@ -108,66 +107,76 @@ class Transmitter:
 			bytes_tx.append(self.pitch & 0xff)
 			bytes_tx.append((self.autoHeading >> 8) & 0xff)
 			bytes_tx.append(self.autoHeading & 0xff)
-			bytes_tx.append((self.sw_c >> 8) & 0xff)
-			bytes_tx.append(self.sw_c & 0xff)
-			bytes_tx.append((self.sw_d >> 8) & 0xff)
-			bytes_tx.append(self.sw_d & 0xff)
-			bytes_tx.append(0x43)
-		
-			bytarr = bytearray()
-			
-			for ele in bytes_tx:
-				bytarr.append(ele)
-			
-			return bytarr
-			
-			
-			
-		
-		
+
+
+
 	def update_gamepad(self):
-		while 1:
-	
+		#Yaw (invert)
+		value = int((-pyJoystick.get_axis(0) + .665) * 1503) 
+		if(value > 2000):
+			value = 2000
+		elif(value < 0):
+			value = 0
+		self.yaw = value
 
-			events = devices.gamepads[0]._do_iter()
-			if events is not None:
-				for event in events:
-					if event.code == "ABS_X":
-						self.raw_yaw = event.state	
-					if event.code == "ABS_Y":
-						self.raw_throttle = event.state
-					if event.code == "ABS_RX":
-						self.raw_pitch = event.state
-					if event.code == "ABS_Z":
-						self.raw_roll = event.state						
-					if event.code == "ABS_RY":
-						self.raw_sw_c = event.state			
-					if event.code == "ABS_RZ":
-						self.raw_sw_d = event.state
-					
 
-				self.throttle = int(2000/1362 * (self.raw_throttle - 342))
-				self.yaw = int(2000/1362 * (self.raw_yaw - 342))
-				self.pitch = int(2000/1362 * (self.raw_pitch - 342))
-				self.roll = int(2000/1362 * (self.raw_roll - 342))
-				
-				if(self.raw_sw_c > 45):
-					self.sw_c = 0
-				else:
-					self.sw_c = 1000
-				
-				if(self.raw_sw_d < 45):
-					self.sw_d = 2000
-				elif(210 > self.raw_sw_d > 45):
-					self.sw_d = 1000
-				elif(self.raw_sw_d > 210):
-					self.sw_d = 0
+		#Throttle
+		value = int((pyJoystick.get_axis(1) + .665) * 1503) #invert
+		if(value > 2000):
+			value = 2000
+		elif(value < 0):
+			value = 0
+		self.throttle = value
 
+
+		#Roll (invert)
+		value = int((-pyJoystick.get_axis(0) + .665) * 1503) #invert
+		if(value > 2000):
+			value = 2000
+		elif(value < 0):
+			value = 0
+		self.roll = value
+
+
+		#Pitch
+		value = int((pyJoystick.get_axis(0) + .665) * 1503) 
+		if(value > 2000):
+			value = 2000
+		elif(value < 0):
+			value = 0
+		self.pitch = value
+
+
+		#AUX A
+		value = int((-pyJoystick.get_axis(1) + .665) * 1503) #invert
+		if(value > 2000):
+			value = 2000
+		elif(value < 0):
+			value = 0
+		self.auxA = value
+
+
+		#AUX D (invert)
+		value = int((-pyJoystick.get_axis(0) + .665) * 1503) #invert
+		if(value > 2000):
+			value = 2000
+		elif(value < 0):
+			value = 0
+		self.auxD = value
+
+
+		#Knob R
+		value = int((-pyJoystick.get_axis(0) + .665) * 1503) #invert
+		if(value > 2000):
+			value = 2000
+		elif(value < 0):
+			value = 0
+		self.knobR = value
+		
 
 
 
 def serial_handler():
-
 
 	if(drone1.ser.in_waiting > 0):
 	
@@ -204,12 +213,6 @@ def serial_handler():
 						else:
 							f.write(rx_aligned)
 				
-		
-			
-
-			
-		
-	 
 
 
 def pid_heading():
@@ -265,8 +268,8 @@ def pid_altitude():
 
 
 
-os.remove('/home/cody/git/drone-comp/rover.ubx')
-f = open('/home/cody/git/drone-comp/rover.ubx', 'wb')
+os.remove('/home/codyd/git/drone-comp/io/rover.ubx')
+f = open('/home/codyd/git/drone-comp/io/rover.ubx', 'wb')
 drone1 = Drone()
 trans_real = Transmitter()
 gps = GPS()
@@ -274,8 +277,7 @@ gps = GPS()
 #get initial counter value
 gps.pastTime = time.perf_counter()
 
-#inputs module blocks
-threading.Thread(target=trans_real.update_gamepad).start()
+
 
 
 
@@ -283,6 +285,7 @@ while 1:
 
 	serial_handler()
 	pid_heading()
+	trans_real.update_gamepad()
 #	print(trans_real.throttle)
 #	print(trans_real.sw_c)
 #	print(trans_real.throttle)
