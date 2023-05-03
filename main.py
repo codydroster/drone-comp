@@ -42,6 +42,7 @@ class Drone:
 		
 		self.ser = serial.Serial(selected_port[0])
 		self.ser.baudrate = 230400
+		self.ser.timeout = 60
 		
 		
 def update_gamepad():
@@ -131,101 +132,65 @@ class Transmitter:
 
 ######also need to send waypoint info###############
 
-		if(True): #0
-			bytes_tx = [0x42]
-			bytes_tx.append(0x42);
-			bytes_tx.append(0x43);
-			bytes_tx.append((self.throttle >> 8) & 0xff)
-			bytes_tx.append(self.throttle & 0xff)
-			bytes_tx.append((self.roll >> 8) & 0xff)
-			bytes_tx.append(self.roll & 0xff)
-			bytes_tx.append((self.pitch >> 8) & 0xff)
-			bytes_tx.append(self.pitch & 0xff)
-			bytes_tx.append((self.yaw >> 8) & 0xff)
-			bytes_tx.append(self.yaw & 0xff)
 
-			bytes_tx.append((self.auxA >> 8) & 0xff)
-			bytes_tx.append(self.auxA & 0xff)
-			bytes_tx.append((self.auxD >> 8) & 0xff)
-			bytes_tx.append(self.auxD & 0xff)
-			bytes_tx.append(0x43)
+		bytes_tx = [0x42]
+		bytes_tx.append(0x42);
+		bytes_tx.append(0x43);
+		bytes_tx.append((self.throttle >> 8) & 0xff)
+		bytes_tx.append(self.throttle & 0xff)
+		bytes_tx.append((self.roll >> 8) & 0xff)
+		bytes_tx.append(self.roll & 0xff)
+		bytes_tx.append((self.pitch >> 8) & 0xff)
+		bytes_tx.append(self.pitch & 0xff)
+		bytes_tx.append((self.yaw >> 8) & 0xff)
+		bytes_tx.append(self.yaw & 0xff)
 
-			hoverThrottle = self.throttle
-		
-			bytarr = bytearray()
-			
-			for ele in bytes_tx:
-				bytarr.append(ele)
-			
-			return bytarr
-			
-			
-		if(False): #1000	AUXC switch on
-			bytes_tx = [0x42]
-			bytes_tx.append((self.throttle >> 8) & 0xff)
-			bytes_tx.append(self.throttle & 0xff)
-			bytes_tx.append((self.roll >> 8) & 0xff)
-			bytes_tx.append(self.roll & 0xff)
-			bytes_tx.append((self.pitch >> 8) & 0xff)
-			bytes_tx.append(self.pitch & 0xff)
-			bytes_tx.append((self.autoHeading >> 8) & 0xff)
-			bytes_tx.append(self.autoHeading & 0xff)
-#			bytes_tx.append(0x43 & 0xff )
+		bytes_tx.append((self.auxA >> 8) & 0xff)
+		bytes_tx.append(self.auxA & 0xff)
+		bytes_tx.append((self.auxD >> 8) & 0xff)
+		bytes_tx.append(self.auxD & 0xff)
+		bytes_tx.append(0x43)
 
-			bytarr = bytearray()
-			
-			for ele in bytes_tx:
-				bytarr.append(ele)
-			
-			return bytarr
-			
-
-
+		hoverThrottle = self.throttle
 	
+		bytarr = bytearray()
 		
-
+		for ele in bytes_tx:
+			bytarr.append(ele)
+		
+		return bytarr
 
 
 def serial_handler():
 
+	rx_m4 = bytearray(11)
 	if(drone1.ser.in_waiting > 0):
 		print('rec')
 		read0 = drone1.ser.read()
 
 	
-		if(read0 != b'B'):
-			f.write(read0)
-	
-	
-	#verify frame **need to simplify**
+		if(read0 == b'B'):
+			drone1.ser.readinto(rx_m4)
 		else:
-			if(drone1.ser.in_waiting > 9):
-				rx_aligned = drone1.ser.read(9)
+			f.write(read0)
+
+		if(rx_m4[0] == b'C' and rx_m4[1] == b'D' and rx_m4[10] == b'E'):
+			drone1.roll = int.from_bytes(rx_m4[2:4], byteorder='big', signed='true')					
+			drone1.pitch = int.from_bytes(rx_m4[4:6], byteorder='big', signed='true')
+			drone1.heading = int.from_bytes(rx_m4[6:8], byteorder='big', signed='true') 
+			drone1.altitude = int.from_bytes(rx_m4[8:10], byteorder='big', signed='true')
 			
-				if(rx_aligned[8] == 0x43): #maybe rx_aligned[9]
-					if(drone1.roll > 1000 and drone1.roll < 2000):
-						if(drone1.pitch > 1000 and drone1.pitch < 2000):
-							if(drone1.heading < 3601):
-								drone1.roll = int.from_bytes(rx_aligned[0:2], byteorder='big', signed='true')					
-								drone1.pitch = int.from_bytes(rx_aligned[2:4], byteorder='big', signed='true')
-								drone1.heading = int.from_bytes(rx_aligned[4:6], byteorder='big', signed='true') 
-								drone1.altitude = int.from_bytes(rx_aligned[6:8], byteorder='big', signed='true')
-								
-	if(drone1.ser.in_waiting < 1):
-	
-		#great time to transmit, next ~600 byte packet 50ms away
-		txbytes = trans_real.transmit_bytes()
-		print(txbytes)
+
+			#great time to transmit, next ~600 byte packet 50ms away
+			txbytes = trans_real.transmit_bytes()
+
 						#send to drone
-		if(txbytes is not None):
-			
-			drone1.ser.write(txbytes)
-			time.sleep(.05)
-							
-					
+			if(txbytes is not None):
+				drone1.ser.write(txbytes)
+				
 		#only write to file if all if statments fail
-#				else:
-#					f.write(rx_aligned)
+		else:
+			f.write(rx_m4)
 				
 
 def transmit_fake_data():
@@ -285,9 +250,6 @@ def pid_altitude():
 	drone1.autoAltitude = min(max(minThrottle, drone1.output), maxThrottle)
 
   
-
-#	print(trans_real.throttle)
-
 
 
 
