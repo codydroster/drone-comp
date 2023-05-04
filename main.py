@@ -15,6 +15,8 @@ pygame.init()
 pygame.joystick.init()
 pyJoystick = pygame.joystick.Joystick(0)
 
+tx_timer = 0
+tx_timer1 = time.process_time()
 
 class GPS:
 	longitude = 0
@@ -161,37 +163,59 @@ class Transmitter:
 		return bytarr
 
 
-def serial_handler():
-
+def serial_handler_rec():
+	global tx_timer1
 	rx_m4 = bytearray(11)
 	if(drone1.ser.in_waiting > 0):
-		print('rec')
+
 		read0 = drone1.ser.read()
 
 	
 		if(read0 == b'B'):
-			drone1.ser.readinto(rx_m4)
+#			while(drone1.ser.in_waiting < 11):
+#				None
+			rx_m4 = drone1.ser.read(11)
+
+		
+			if(rx_m4[0] == 67 and rx_m4[1] == 68 and rx_m4[10] == 69):
+			
+				drone1.roll = int.from_bytes(rx_m4[3:5], byteorder='big', signed='true')					
+				drone1.pitch = int.from_bytes(rx_m4[4:6], byteorder='big', signed='true')
+				drone1.heading = int.from_bytes(rx_m4[6:8], byteorder='big', signed='true') 
+				drone1.altitude = int.from_bytes(rx_m4[8:10], byteorder='big', signed='true')
+				
+				print(drone1.roll)
+				
+			else:
+				f.write(rx_m4)		
 		else:
 			f.write(read0)
-
-		if(rx_m4[0] == b'C' and rx_m4[1] == b'D' and rx_m4[10] == b'E'):
-			drone1.roll = int.from_bytes(rx_m4[2:4], byteorder='big', signed='true')					
-			drone1.pitch = int.from_bytes(rx_m4[4:6], byteorder='big', signed='true')
-			drone1.heading = int.from_bytes(rx_m4[6:8], byteorder='big', signed='true') 
-			drone1.altitude = int.from_bytes(rx_m4[8:10], byteorder='big', signed='true')
-			
-
-			#great time to transmit, next ~600 byte packet 50ms away
-			txbytes = trans_real.transmit_bytes()
-
 						#send to drone
-			if(txbytes is not None):
-				drone1.ser.write(txbytes)
-				
-		#only write to file if all if statments fail
-		else:
-			f.write(rx_m4)
-				
+	
+	current_time = time.process_time()
+	if(((current_time - tx_timer1) > .01)):
+		txbytes = trans_real.transmit_bytes()
+		if(txbytes is not None):
+			drone1.ser.write(txbytes)
+		tx_timer1 = time.process_time()
+	time.sleep(.001)
+		
+
+def serial_handler():
+	global tx_timer1
+	
+	if(drone1.ser.in_waiting > 0):
+
+		f.write(drone1.ser.read())
+						
+	current_time = time.process_time()
+	if(((current_time - tx_timer1) > .005)):
+		txbytes = trans_real.transmit_bytes()
+		if(txbytes is not None):
+			drone1.ser.write(txbytes)
+		tx_timer1 = time.process_time()
+	time.sleep(.001)
+
 
 def transmit_fake_data():
 	#great time to transmit, next ~600 byte packet 50ms away
@@ -261,8 +285,6 @@ gps = GPS()
 
 #get initial counter value
 gps.pastTime = time.perf_counter()
-
-
 
 
 
