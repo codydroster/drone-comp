@@ -1,48 +1,34 @@
 import io
 import os
-import fileinput
-
+import time
 
 class GPS:
-
 	def __init__(self, filepath):
-		self.lat = 0
+		self.lat = 0		
 		self.long = 0
 		self.alt = 0
 
-
 		self.filepath = filepath
-		f = open(filepath, 'r+')
-		f.readlines()
-		self.currentPos = f.tell()
-		f.close()
-
-
+		self.file = open(self.filepath, 'r+')
+		self.file.readlines()
+		self.currentPos = self.file.tell()
+    
 	def getGPS(self):
-		f = open('/home/cody/Desktop/sol1.pos', 'r+')
-		f.seek(self.currentPos,0)
-		line = f.readline()
-		self.currentPos = f.tell()
-		if(line is not ''):
-			self.lat = (line[17:30])
-			self.long = (line[32:45])
-			self.alt = (line[48:56])
-			f.close()			
-	
+		with open(self.filepath, 'r+') as f:
+			f.seek(self.currentPos, 0)
+			line = f.readline()
+			self.currentPos = f.tell()
+			if line != '':
+				fields = line.split()
+				self.lat = float(fields[2])
+				self.long = float(fields[3])
+				self.alt = float(fields[4])
 
+				
 
-#f = open('/home/cody/Desktop/sol1.pos', 'r+')
-#f.readlines()
-#currentPos = f.tell()
-#f.close()
+gps = GPS('./position_data/rov.pos')
 
-#while 1:
-#	f = open('/home/cody/Desktop/sol1.pos', 'r+')
-#	f.seek(currentPos,0)
-#	line = f.readline()
-#	currentPos = f.tell()
-#	if(line is not ''):
-#		print(line[17:30])
-#		print(line[32:45])
-#		print(line[48:56])
-#	f.close()
+while True:
+    gps.getGPS()
+    print(gps.lat)
+    time.sleep(.01)
