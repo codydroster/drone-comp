@@ -4,6 +4,7 @@ import serial
 import serial.tools.list_ports
 import sys
 import os
+import argparse
 
 from transmitter import Transmitter
 from drone import Drone
@@ -15,77 +16,70 @@ import os
 import fileinput
 import multiprocessing as mp
 
-if(len(sys.argv) > 1):
-	if(sys.argv[1] != 'NOTRANS'):
-		pygame.init()
-		pygame.joystick.init()
-		pyJoystick = pygame.joystick.Joystick(0)
 
 
-		def update_gamepad():
-			#Yaw (invert)
-			value = int((-pyJoystick.get_axis(0) + .665) * 1503) 
-			if(value > 2000):
-				value = 2000
-			elif(value < 0):
-				value = 0
-			trans_real.yaw = value
+def update_gamepad():
+	#Yaw (invert)
+	value = int((-pyJoystick.get_axis(0) + .665) * 1503) 
+	if(value > 2000):
+		value = 2000
+	elif(value < 0):
+		value = 0
+	trans_real.yaw = value
 
 
-			#Throttle
-			value = int((pyJoystick.get_axis(1) + .665) * 1503) #invert
-			if(value > 2000):
-				value = 2000
-			elif(value < 0):
-				value = 0
-			trans_real.throttle = value
+	#Throttle
+	value = int((pyJoystick.get_axis(1) + .665) * 1503) #invert
+	if(value > 2000):
+		value = 2000
+	elif(value < 0):
+		value = 0
+	trans_real.throttle = value
 
 
-			#Roll (invert)
-			value = int((-pyJoystick.get_axis(2) + .665) * 1503) #invert
-			if(value > 2000):
-				value = 2000
-			elif(value < 0):
-				value = 0
-			trans_real.roll = value
+	#Roll (invert)
+	value = int((-pyJoystick.get_axis(2) + .665) * 1503) #invert
+	if(value > 2000):
+		value = 2000
+	elif(value < 0):
+		value = 0
+	trans_real.roll = value
 
 
-			#Pitch
-			value = int((pyJoystick.get_axis(3) + .665) * 1503) 
-			if(value > 2000):
-				value = 2000
-			elif(value < 0):
-				value = 0
-			trans_real.pitch = value
+	#Pitch
+	value = int((pyJoystick.get_axis(3) + .665) * 1503) 
+	if(value > 2000):
+		value = 2000
+	elif(value < 0):
+		value = 0
+	trans_real.pitch = value
 
 
-			#AUX A
-			value = int((-pyJoystick.get_axis(4) + .665) * 1503) #invert
-			if(value > 2000):
-				value = 2000
-			elif(value < 0):
-				value = 0
-			trans_real.auxA = value
+	#AUX A
+	value = int((-pyJoystick.get_axis(4) + .665) * 1503) #invert
+	if(value > 2000):
+		value = 2000
+	elif(value < 0):
+		value = 0
+	trans_real.auxA = value
 
 
-			#AUX D (invert)
-			value = int((-pyJoystick.get_axis(5) + .565) * 1503) #invert
-			if(value > 2000):
-				value = 2000
-			elif(value < 0):
-				value = 0
-			trans_real.auxD = value
+	#AUX D (invert)
+	value = int((-pyJoystick.get_axis(5) + .565) * 1503) #invert
+	if(value > 2000):
+		value = 2000
+	elif(value < 0):
+		value = 0
+	trans_real.auxD = value
 
 
-			#Knob R
-			value = int((-pyJoystick.get_axis(6) + .665) * 1503) #invert
-			if(value > 2000):
-				value = 2000
-			elif(value < 0):
-				value = 0
-			trans_real.knobR = value
-
-
+	#Knob R
+	value = int((-pyJoystick.get_axis(6) + .665) * 1503) #invert
+	if(value > 2000):
+		value = 2000
+	elif(value < 0):
+		value = 0
+	trans_real.knobR = value
 
 
 
@@ -98,8 +92,6 @@ def serial_handler_rec():
 
 	
 		if(read0 == b'B'):
-#			while(drone1.ser.in_waiting < 11):
-#				None
 			rx_m4 = drone1.ser.read(11)
 
 		
@@ -110,7 +102,7 @@ def serial_handler_rec():
 				drone1.heading = int.from_bytes(rx_m4[6:8], byteorder='big', signed='true') 
 				drone1.altitude = int.from_bytes(rx_m4[8:10], byteorder='big', signed='true')
 				
-				print(drone1.roll)
+				# print(drone1.roll)
 				
 			else:
 				f.write(rx_m4)		
@@ -152,12 +144,52 @@ def transmit_fake_data():
 		drone1.ser.write(txbytes)
 		print(trans_real.throttle)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--controller', choices=['none'])
+
+args = parser.parse_args()
+
+if args.controller != 'none':
+		pygame.init()
+		pygame.joystick.init()
+		pyJoystick = pygame.joystick.Joystick(0)
+
+
+def calculate_error():
+
+	scaleFactor = 1000000
+	droneGPS.getGPS()
+	targetGPS.getGPS()
+
+	latError = droneGPS.lat - targetGPS.lat
+	longError = droneGPS.long - targetGPS.long
+	altError = droneGPS.alt - targetGPS.alt
+
+	return [latError *scaleFactor, longError *scaleFactor, altError]
+
+
 
 #test if valid
-os.remove('/home/codyd/git/drone-comp/io/rover.ubx')
-f = open('/home/codyd/git/drone-comp/io/rover.ubx', 'wb')
+if os.path.exists('./io/rover.ubx'):
+	os.remove('./io/rover.ubx')
+	f = open('./io/rover.ubx', 'wb')
+	f.close()
+else:
+	f = open('./io/rover.ubx', 'wb')
+	f.close()
+
+if os.path.exists('./io/target.ubx'):
+	os.remove('./io/target.ubx')
+	f = open('./io/target.ubx', 'wb')
+	f.close()
+else:
+	f = open('./io/target.ubx', 'wb')
+	f.close()	
+
 drone1 = Drone()
 trans_real = Transmitter()
+droneGPS = GPS('./position_data/rover.pos')
+targetGPS = GPS('./position_data/target.pos')
 
 tx_timer = 0
 tx_timer1 = time.process_time()
@@ -168,9 +200,12 @@ while(True):
 
 	serial_handler()
 
-	if(len(sys.argv) > 1):
-		if(sys.argv[1] != 'NOTRANS'):
-			pygame.event.pump()
-			update_gamepad()
+	if args.controller != 'none':
+		pygame.event.pump()
+		update_gamepad()
+		calculate_error()
+	
+	print(calculate_error()[0])
+	time.sleep(.001)
 
 	

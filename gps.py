@@ -7,28 +7,27 @@ class GPS:
 		self.lat = 0		
 		self.long = 0
 		self.alt = 0
+		try:
+			self.filepath = filepath
+			self.file = open(self.filepath, 'r+')
+			self.file.readlines()
+			self.currentPos = self.file.tell()
+		except:
+			print(self.filepath, 'not available')
 
-		self.filepath = filepath
-		self.file = open(self.filepath, 'r+')
-		self.file.readlines()
-		self.currentPos = self.file.tell()
-    
 	def getGPS(self):
-		with open(self.filepath, 'r+') as f:
-			f.seek(self.currentPos, 0)
-			line = f.readline()
-			self.currentPos = f.tell()
-			if line != '':
-				fields = line.split()
-				self.lat = float(fields[2])
-				self.long = float(fields[3])
-				self.alt = float(fields[4])
-
+		try:
+			with open(self.filepath, 'r+') as f:
+				f.seek(self.currentPos, 0)
+				line = f.readline()
+				self.currentPos = f.tell()
+				if line != '':
+					fields = line.split()
+					self.lat = float(fields[2])
+					self.long = float(fields[3])
+					self.alt = float(fields[4])
+		except:
+			print(self.filepath, 'not available')
 				
 
-gps = GPS('./position_data/rov.pos')
-
-while True:
-    gps.getGPS()
-    print(gps.lat)
-    time.sleep(.01)
+#gps = GPS('./position_data/rov1.pos')
