@@ -38,6 +38,8 @@ class Transmitter:
 		bytes_tx.append(self.auxA & 0xff)
 		bytes_tx.append((self.auxD >> 8) & 0xff)
 		bytes_tx.append(self.auxD & 0xff)
+		bytes_tx.append((self.knobR >> 8) & 0xff)
+		bytes_tx.append(self.knobR & 0xff)
 
 		bytes_tx.append((self.errorLAT >>8) & 0xff)
 		bytes_tx.append(self.errorLAT & 0xff)
