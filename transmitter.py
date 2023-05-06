@@ -10,16 +10,16 @@ class Transmitter:
 	auxD = 0
 	knobR = 0
 
-	errorLAT = 0
-	errorLONG = 0
-	errorALT = 0
+	errorLAT = -4024
+	errorLONG = -3023
+	errorALT = 5098
 
 
 #	def __init__(self):
 		
 	def transmit_bytes(self):
 
-######also need to send waypoint info###############
+
 
 
 		bytes_tx = [0x42]

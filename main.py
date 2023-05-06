@@ -178,18 +178,18 @@ if args.controller != 'none':
 if os.path.exists('./io/rover.ubx'):
 	os.remove('./io/rover.ubx')
 	f = open('./io/rover.ubx', 'wb')
-	f.close()
+	
 else:
 	f = open('./io/rover.ubx', 'wb')
-	f.close()
+	
 
 if os.path.exists('./io/target.ubx'):
 	os.remove('./io/target.ubx')
-	f = open('./io/target.ubx', 'wb')
-	f.close()
+	f1 = open('./io/target.ubx', 'wb')
+
 else:
-	f = open('./io/target.ubx', 'wb')
-	f.close()	
+	f1 = open('./io/target.ubx', 'wb')
+	
 
 drone1 = Drone()
 trans_real = Transmitter()
@@ -210,7 +210,7 @@ while(True):
 		update_gamepad()
 		calculate_error()
 	
-	print(calculate_error()[0])
+#	print(calculate_error()[0])
 	time.sleep(.001)
 
 	
