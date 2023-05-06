@@ -30,4 +30,5 @@ class GPS:
 			print(self.filepath, 'not available')
 				
 
-#gps = GPS('./position_data/rov1.pos')
+# gps = GPS('./position_data/rover.pos')
+

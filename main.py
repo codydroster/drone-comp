@@ -14,7 +14,7 @@ import time
 import io
 import os
 import fileinput
-import multiprocessing as mp
+
 
 
 
@@ -144,15 +144,6 @@ def transmit_fake_data():
 		drone1.ser.write(txbytes)
 		print(trans_real.throttle)
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--controller', choices=['none'])
-
-args = parser.parse_args()
-
-if args.controller != 'none':
-		pygame.init()
-		pygame.joystick.init()
-		pyJoystick = pygame.joystick.Joystick(0)
 
 
 def calculate_error():
@@ -167,6 +158,20 @@ def calculate_error():
 
 	return [latError *scaleFactor, longError *scaleFactor, altError]
 
+
+
+
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--controller', choices=['none'])
+
+args = parser.parse_args()
+
+if args.controller != 'none':
+		pygame.init()
+		pygame.joystick.init()
+		pyJoystick = pygame.joystick.Joystick(0)
 
 
 #test if valid

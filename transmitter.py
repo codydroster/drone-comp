@@ -10,9 +10,9 @@ class Transmitter:
 	auxD = 0
 	knobR = 0
 
-	hoverThrottle = 600
-	autoHeading = 1500
-	autoAltitude = 0
+	errorLAT = 0
+	errorLONG = 0
+	errorALT = 0
 
 
 #	def __init__(self):
@@ -38,10 +38,17 @@ class Transmitter:
 		bytes_tx.append(self.auxA & 0xff)
 		bytes_tx.append((self.auxD >> 8) & 0xff)
 		bytes_tx.append(self.auxD & 0xff)
+
+		bytes_tx.append((self.errorLAT >>8) & 0xff)
+		bytes_tx.append(self.errorLAT & 0xff)
+		bytes_tx.append((self.errorLONG >>8) & 0xff)
+		bytes_tx.append(self.errorLONG & 0xff)
+		bytes_tx.append((self.errorALT >>8) & 0xff)
+		bytes_tx.append(self.errorALT & 0xff)
+		
 		bytes_tx.append(0x43)
 
-		hoverThrottle = self.throttle
-	
+
 		bytarr = bytearray()
 		
 		for ele in bytes_tx:
