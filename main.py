@@ -123,8 +123,9 @@ def serial_handler():
 	global tx_timer1
 	
 	if(drone1.ser.in_waiting > 0):
+		read = drone1.ser.read(drone1.ser.in_waiting)
 
-		f.write(drone1.ser.read())
+		f.write(read)
 						
 	current_time = time.process_time()
 	if(((current_time - tx_timer1) > .005)):
