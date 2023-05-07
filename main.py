@@ -74,7 +74,7 @@ def update_gamepad():
 
 
 	#Knob R
-	value = int((-pyJoystick.get_axis(6) + .665) * 1503) #invert
+	value = int((pyJoystick.get_axis(7) + .665) * 1503) #invert
 	if(value > 2000):
 		value = 2000
 	elif(value < 0):
@@ -152,15 +152,16 @@ def transmit_fake_data():
 
 def calculate_error():
 
-	scaleFactor = 1000000
+	scaleFactor = 10000000
+	scaleFactorAlt = 100
 	droneGPS.getGPS()
 	targetGPS.getGPS()
 
-	latError = droneGPS.lat - targetGPS.lat
-	longError = droneGPS.long - targetGPS.long
-	altError = droneGPS.alt - targetGPS.alt
+	latError = int(droneGPS.lat*scaleFactor - targetGPS.lat*scaleFactor)
+	longError = int(droneGPS.long*scaleFactor - targetGPS.long*scaleFactor)
+	altError = int(droneGPS.alt*scaleFactorAlt - targetGPS.alt*scaleFactorAlt)
 
-	return [latError *scaleFactor, longError *scaleFactor, altError]
+	return [latError, longError, altError]
 
 
 
@@ -199,22 +200,34 @@ drone1 = Drone()
 trans_real = Transmitter()
 droneGPS = GPS('./position_data/rover.pos')
 targetGPS = GPS('./position_data/target.pos')
+targetGPS.lat = 43.089602
+targetGPS.long = -89.282316
+targetGPS.alt = 350
 
-tx_timer = 0
+
 tx_timer1 = time.process_time()
-
+tx_timer2 = time.process_time()
 
 
 while(True):
 
-	serial_handler()
 
+	serial_handler()
 	if args.con != 'none':
 		pygame.event.pump()
-		update_gamepad()
-		calculate_error()
+		update_gamepad() 
+		
 	
-#	print(calculate_error()[0])
+	current_time = time.process_time()
+	if(((current_time - tx_timer2) > .01)):
+		error = calculate_error()
+		trans_real.errorLAT = min(10000, (max(error[0], -10000)))
+		trans_real.errorLONG = min(10000, (max(error[1], -10000)))
+		trans_real.errorALT = min(10000, (max(error[2], -10000)))
+		
+		print(trans_real.errorLAT)
+		
+		tx_timer2 = time.process_time()
 	time.sleep(.001)
 
 	

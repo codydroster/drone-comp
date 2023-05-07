@@ -19,6 +19,7 @@ class GPS:
 		try:
 			with open(self.filepath, 'r+') as f:
 				f.seek(self.currentPos, 0)
+
 				line = f.readline()
 				self.currentPos = f.tell()
 				if line != '':
