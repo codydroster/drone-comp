@@ -122,13 +122,16 @@ def serial_handler_rec():
 def serial_handler():
 	global tx_timer1
 	
-	if(drone1.ser.in_waiting > 0):
+	if(drone1.ser.in_waiting > 10):
+		f = open('./io/rover.ubx', 'ab')
 		read = drone1.ser.read(drone1.ser.in_waiting)
 
 		f.write(read)
+		f.close()
+		
 						
 	current_time = time.process_time()
-	if(((current_time - tx_timer1) > .005)):
+	if(((current_time - tx_timer1) > .01)):
 		txbytes = trans_real.transmit_bytes()
 		if(txbytes is not None):
 			drone1.ser.write(txbytes)
@@ -165,11 +168,11 @@ def calculate_error():
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--controller', choices=['none'])
+parser.add_argument('--con', choices=['none'])
 
 args = parser.parse_args()
 
-if args.controller != 'none':
+if args.con != 'none':
 		pygame.init()
 		pygame.joystick.init()
 		pyJoystick = pygame.joystick.Joystick(0)
@@ -178,10 +181,10 @@ if args.controller != 'none':
 #test if valid
 if os.path.exists('./io/rover.ubx'):
 	os.remove('./io/rover.ubx')
-	f = open('./io/rover.ubx', 'wb')
+
 	
-else:
-	f = open('./io/rover.ubx', 'wb')
+#else:
+#	f = open('./io/rover.ubx', 'wb')
 	
 
 if os.path.exists('./io/target.ubx'):
@@ -206,7 +209,7 @@ while(True):
 
 	serial_handler()
 
-	if args.controller != 'none':
+	if args.con != 'none':
 		pygame.event.pump()
 		update_gamepad()
 		calculate_error()

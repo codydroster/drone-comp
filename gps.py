@@ -26,6 +26,7 @@ class GPS:
 					self.lat = float(fields[2])
 					self.long = float(fields[3])
 					self.alt = float(fields[4])
+				f.close()
 		except:
 			print(self.filepath, 'not available')
 				
