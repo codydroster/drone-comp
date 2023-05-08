@@ -7,10 +7,13 @@ from gps import GPS
 gps = GPS('./position_data/rover.pos')
 gpsTarget = GPS('./position_data/target.pos')
 
+f = open('./position_data/rover.pos', 'r+')
+
+
 while True:
-	gps.setFakeGPS()
-	gpsTarget.setFakeGPS()
-	print(gps.lat)
+	gps.setFakeGPS(f)
+#	gpsTarget.setFakeGPS()
+#	print(gps.lat)
 	time.sleep(.2)
    
    
