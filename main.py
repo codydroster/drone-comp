@@ -7,7 +7,7 @@ import os
 import argparse
 
 from transmitter import Transmitter
-from drone import Drone
+from drone import Drone, Target
 from gps import GPS
 
 import time
@@ -129,6 +129,12 @@ def serial_handler():
 		f.write(read)
 		f.close()
 		
+	if(target1.ser.in_waiting > 10):
+		f1 = open('./io/target.ubx', 'ab')
+		read = target1.ser.read(target1.ser.in_waiting)
+
+		f1.write(read)
+		f1.close
 						
 	current_time = time.process_time()
 	if(((current_time - tx_timer1) > .01)):
@@ -183,10 +189,7 @@ if args.con != 'none':
 if os.path.exists('./io/rover.ubx'):
 	os.remove('./io/rover.ubx')
 
-	
-#else:
-#	f = open('./io/rover.ubx', 'wb')
-	
+
 
 if os.path.exists('./io/target.ubx'):
 	os.remove('./io/target.ubx')
@@ -197,12 +200,13 @@ else:
 	
 
 drone1 = Drone()
+target1 = Target()
 trans_real = Transmitter()
 droneGPS = GPS('./position_data/rover.pos')
 targetGPS = GPS('./position_data/target.pos')
-targetGPS.lat = 43.089602
-targetGPS.long = -89.282316
-targetGPS.alt = 350
+#targetGPS.lat = 43.089602
+#targetGPS.long = -89.282316
+#targetGPS.alt = 350
 
 
 tx_timer1 = time.process_time()
@@ -224,8 +228,9 @@ while(True):
 		trans_real.errorLAT = min(10000, (max(error[0], -10000)))
 		trans_real.errorLONG = min(10000, (max(error[1], -10000)))
 		trans_real.errorALT = min(10000, (max(error[2], -10000)))
-		
-		print(trans_real.errorLAT)
+
+		print(str(trans_real.errorLAT) + '  ' + str(trans_real.errorLONG))	
+#		print(droneGPS.lat)
 		
 		tx_timer2 = time.process_time()
 	time.sleep(.001)
