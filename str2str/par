@@ -1,2 +1,2 @@
--in serial://ttyACM0:230400:8:n:1:off#ubx -out file://base.rtcm3#rtcm3
+-in serial://ttyACM0:230400:8:n:1:off#ubx -out file://../io/base.rtcm3#rtcm3
 
