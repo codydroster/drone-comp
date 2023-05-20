@@ -31,8 +31,8 @@ class GPS:
 					self.alt = float(fields[4])
 				f.close()
 		except:
-			print(self.filepath, 'not available')
-				
+		#	print(self.filepath, 'not available')
+			pass		
 
 
 				

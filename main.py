@@ -158,7 +158,7 @@ def transmit_fake_data():
 
 def calculate_error():
 
-	scaleFactor = 10000000
+	scaleFactor = 10000000 		# 1cm per unit
 	scaleFactorAlt = 100
 	droneGPS.getGPS()
 	targetGPS.getGPS()
@@ -167,8 +167,8 @@ def calculate_error():
 	longError = int(droneGPS.long*scaleFactor - targetGPS.long*scaleFactor)
 	altError = int(droneGPS.alt*scaleFactorAlt - targetGPS.alt*scaleFactorAlt)
 
-	return [latError, longError, altError]
-
+#	return [latError, longError, altError]
+	return [-50, 2000, 0]
 
 
 
@@ -225,14 +225,14 @@ while(True):
 	current_time = time.process_time()
 	if(((current_time - tx_timer2) > .01)):
 		error = calculate_error()
-		trans_real.errorLAT = min(10000, (max(error[0], -10000)))
-		trans_real.errorLONG = min(10000, (max(error[1], -10000)))
-		trans_real.errorALT = min(10000, (max(error[2], -10000)))
+		trans_real.errorLAT = min(1000, (max(error[0], -1000)))
+		trans_real.errorLONG = min(1000, (max(error[1], -1000)))
+		trans_real.errorALT = min(1000, (max(error[2], -1000)))
 
 		print(str(trans_real.errorLAT) + '  ' + str(trans_real.errorLONG))	
 #		print(droneGPS.lat)
 		
 		tx_timer2 = time.process_time()
-	time.sleep(.001)
+	time.sleep(.002)
 
 	
