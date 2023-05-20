@@ -129,7 +129,7 @@ def serial_handler():
 		f.write(read)
 		f.close()
 
-	if args.o != 'notarget':	
+	if args.t != 'notarget':	
 		if(target1.ser.in_waiting > 10):
 			f1 = open('./io/target.ubx', 'ab')
 			read = target1.ser.read(target1.ser.in_waiting)
@@ -176,11 +176,12 @@ def calculate_error():
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-o', choices=['noctl', 'notarget'])
+parser.add_argument('-c', choices=['noctl'])
+parser.add_argument('-t', choices=['notarget'])
 
 args = parser.parse_args()
 
-if args.o != 'noctl':
+if args.c != 'noctl':
 		pygame.init()
 		pygame.joystick.init()
 		pyJoystick = pygame.joystick.Joystick(0)
@@ -200,11 +201,15 @@ else:
 	f1 = open('./io/target.ubx', 'wb')
 	
 drone1 = Drone()
-if args.o != 'notarget':
+if args.t != 'notarget':
 	target1 = Target()
 trans_real = Transmitter()
 droneGPS = GPS('./position_data/rover.pos')
-targetGPS = GPS('./position_data/target.pos')
+
+if args.t != 'notarget':
+	targetGPS = GPS('./position_data/target.pos')
+else:
+	targetGPS = GPS('./position_data/setpoint.pos')
 #targetGPS.lat = 43.089602
 #targetGPS.long = -89.282316
 #targetGPS.alt = 350
@@ -218,7 +223,7 @@ while(True):
 
 
 	serial_handler()
-	if args.o != 'noctl':
+	if args.c != 'noctl':
 		pygame.event.pump()
 		update_gamepad() 
 		
