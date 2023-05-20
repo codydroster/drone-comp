@@ -128,13 +128,14 @@ def serial_handler():
 
 		f.write(read)
 		f.close()
-		
-	if(target1.ser.in_waiting > 10):
-		f1 = open('./io/target.ubx', 'ab')
-		read = target1.ser.read(target1.ser.in_waiting)
 
-		f1.write(read)
-		f1.close
+	if args.o != 'notarget':	
+		if(target1.ser.in_waiting > 10):
+			f1 = open('./io/target.ubx', 'ab')
+			read = target1.ser.read(target1.ser.in_waiting)
+
+			f1.write(read)
+			f1.close
 						
 	current_time = time.process_time()
 	if(((current_time - tx_timer1) > .01)):
@@ -168,18 +169,18 @@ def calculate_error():
 	altError = int(droneGPS.alt*scaleFactorAlt - targetGPS.alt*scaleFactorAlt)
 
 #	return [latError, longError, altError]
-	return [-50, 2000, 0]
+	return [309, 309, 0]
 
 
 
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--con', choices=['none'])
+parser.add_argument('-o', choices=['noctl', 'notarget'])
 
 args = parser.parse_args()
 
-if args.con != 'none':
+if args.o != 'noctl':
 		pygame.init()
 		pygame.joystick.init()
 		pyJoystick = pygame.joystick.Joystick(0)
@@ -198,9 +199,9 @@ if os.path.exists('./io/target.ubx'):
 else:
 	f1 = open('./io/target.ubx', 'wb')
 	
-
 drone1 = Drone()
-target1 = Target()
+if args.o != 'notarget':
+	target1 = Target()
 trans_real = Transmitter()
 droneGPS = GPS('./position_data/rover.pos')
 targetGPS = GPS('./position_data/target.pos')
@@ -217,7 +218,7 @@ while(True):
 
 
 	serial_handler()
-	if args.con != 'none':
+	if args.o != 'noctl':
 		pygame.event.pump()
 		update_gamepad() 
 		
@@ -225,9 +226,9 @@ while(True):
 	current_time = time.process_time()
 	if(((current_time - tx_timer2) > .01)):
 		error = calculate_error()
-		trans_real.errorLAT = min(1000, (max(error[0], -1000)))
-		trans_real.errorLONG = min(1000, (max(error[1], -1000)))
-		trans_real.errorALT = min(1000, (max(error[2], -1000)))
+		trans_real.errorLAT = min(500, (max(error[0], -500)))	#pitch
+		trans_real.errorLONG = min(500, (max(error[1], -500)))	#roll
+		trans_real.errorALT = min(500, (max(error[2], -500)))
 
 		print(str(trans_real.errorLAT) + '  ' + str(trans_real.errorLONG))	
 #		print(droneGPS.lat)
